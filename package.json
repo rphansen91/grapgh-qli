@@ -1,0 +1,34 @@
+{
+  "name": "graph-qli",
+  "version": "1.0.1",
+  "description": "CLI to easily get started with GrapghQL",
+  "main": "index.js",
+  "dependencies": {
+    "dotenv": "^4.0.0",
+    "inquirer": "^3.0.6",
+    "node-fetch": "^1.6.3"
+  },
+  "devDependencies": {
+    "eslint": "^3.19.0",
+    "jest": "^19.0.2",
+    "nodemon": "^1.11.0",
+    "pre-commit": "^1.2.2"
+  },
+  "scripts": {
+    "dev": "./node_modules/.bin/nodemon --exec 'npm run lint && npm test && npm start'",
+    "test": "./node_modules/.bin/jest .",
+    "start": "NODE_ENV=dev node index.js",
+    "lint": "./node_modules/.bin/eslint .",
+    "lint:prod": "NODE_ENV=prod ./node_modules/.bin/eslint ."
+  },
+  "pre-commit": [
+    "lint:prod",
+    "test"
+  ],
+  "keywords": [],
+  "author": "T3",
+  "license": "ISC",
+  "bin": {
+    "gqli": "index.js"
+  }
+}
