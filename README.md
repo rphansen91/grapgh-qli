@@ -5,14 +5,13 @@
 ## Usage
 
 1. `npm install graph-qli -g`
-2. `gqli create {{project_name}}`
+2. `gqcli create {{project_name}}`
 3. `cd {{project_name}}`
-4. `npm install`
-5. `npm run dev`
+4. `npm run dev`
 
 ## Query
 
-`gqli query {{query_name}}`
+`gqcli query {{query_name}}`
 
   Will ask to supply a schema or an endpoint.
 
@@ -20,7 +19,7 @@
 
 ## Mutation
 
-`gqli mutation {{mutation_name}}`
+`gqcli mutation {{mutation_name}}`
 
   Will ask to supply a schema or an endpoint.
 

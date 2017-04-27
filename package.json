@@ -1,12 +1,13 @@
 {
   "name": "graph-qli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI to easily get started with GrapghQL",
   "main": "index.js",
   "dependencies": {
     "dotenv": "^4.0.0",
     "inquirer": "^3.0.6",
-    "node-fetch": "^1.6.3"
+    "node-fetch": "^1.6.3",
+    "progress": "^2.0.0"
   },
   "devDependencies": {
     "eslint": "^3.19.0",
@@ -29,6 +30,6 @@
   "author": "T3",
   "license": "ISC",
   "bin": {
-    "gqli": "index.js"
+    "gqcli": "index.js"
   }
 }

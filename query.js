@@ -1,11 +1,21 @@
-const fs = require('fs')
-const path = require('path')
+const { createDirName, write, isDir } = require('./utils/files')
 const inquirer = require('inquirer')
 const fetch = require('node-fetch')
 const output = require('./utils/output')
 const noName = output.error('Must supply a query name')
-const currentDir = process.cwd()
-const createDirName = name => path.resolve(currentDir, name)
+
+function findMainTypes (data) {
+  if (Array.isArray(data[0])) {
+    const type = findTypes(data[0][0])
+    return inquirer.prompt({
+      type: 'input',
+      name: 'name',
+      message: 'What is the name of this type? \n' + buildTypes('{{type_name}}', buildArgs(type))
+    }).then(({ name }) => [type, data[1], name])
+  } else {
+    return Promise.resolve([findTypes(data[0]), data[1]])
+  }
+}
 
 function findTypes (data) {
 
@@ -26,11 +36,12 @@ function findTypes (data) {
   }
 
   if (Array.isArray(data)) {
-    return findTypes(data[0])
+    return '[' + findTypes(data[0]) + ']'
   }
 
-  if (typeof data === 'object') {
-    return Object.keys(data)
+  if (data && typeof data === 'object') {
+    return Object.keys(data || {})
+    .filter(key => findType(key, data[key]))
     .reduce((acc, key) => {
       acc[key] = findType(key, data[key])
       return acc
@@ -55,13 +66,14 @@ function buildTypes (name, types) {
   ].join('\n')
 }
 
-function buildQueryFile (name, url, args, type) {
+function buildQueryFile (name, url, args, type, selector) {
   return `const fetch = require('node-fetch')
 
 function ${name} (obj, args, context, info) {
   const { ${Object.keys(args || {}).join(', ')} } = args
   return fetch('${url}')
   .then(res => res.json())
+  ${selector ? `.then(res => res.${selector})`:''}
 }
 
 ${name}.prototype.typing = () => '${name}(${buildArgs(args).join(', ')}): ${type}'
@@ -78,27 +90,24 @@ ${name}.prototype.typing = () =>
 module.exports = ${name}`
 }
 
-function isDir (dir) {
-  return new Promise((res) => {
-    fs.stat(dir, (err, data) => {
-      if (data) res(true)
-      res(false)
-    })
-  })
-}
-
-function write (filepath, contents) {
-  return new Promise((res) => {
-    fs.writeFile(filepath, contents, 'utf-8', (err) => {
-      if (err) res(false)
-      res(true)
-    })
-  })
-}
-
 function find (url) {
   return fetch(url)
   .then(res => res.json())
+}
+
+function resolve (res, accSelector) {
+  accSelector = accSelector || ''
+  return inquirer.prompt([{
+    type: 'list',
+    name: 'selector',
+    message: 'Select the key to resolve',
+    choices: ['.'].concat(Object.keys(res || {}))
+  }])
+  .then(({ selector }) => {
+    if (selector === '.') return [res, accSelector]
+    if (!accSelector) return resolve(res[selector], selector)
+    return resolve(res[selector], accSelector + '.' + selector)
+  })
 }
 
 function findQuery (url) {
@@ -141,10 +150,10 @@ module.exports = function (commands) {
   .then((url) => Promise.all([
     makeUrl(url),
     findTypes(findQuery(url)),
-    find(executableUrl(url))
+    find(executableUrl(url)).then(resolve).then(findMainTypes)
   ]))
   .then(([url, query, data]) => {
-    const types = findTypes(data)
+    const types = data[0]
     const queryDir = createDirName('gqli/query')
     const typesDir = createDirName('gqli/types')
 
@@ -157,18 +166,17 @@ module.exports = function (commands) {
       if (!dirs[1]) return output(output.error('Not Found ' + typesDir))
 
       const queryFile = queryDir+'/'+name+'.js'
-      const typesFile = typesDir+'/'+capital(name)+'.js'
+      const typesFile = typesDir+'/'+(data[2] || capital(name))+'.js'
 
-      write(queryFile, buildQueryFile(name, url, query, capital(name)))
-      .then((saved) => {
-        if (saved) output('Saved new query to: ' + output.style(queryFile, 'green'))
-      })
+      write(queryFile, buildQueryFile(name, url, query, data[2] ? '['+data[2]+']' : capital(name), data[1]))
+      .then(() => output('Saved new query to: ' + output.style(queryFile, 'green')))
 
-      write(typesFile, buildTypeFile(capital(name), buildArgs(types)))
-      .then(saved => {
-        if (saved) output('Saved new type to: ' + output.style(typesFile, 'green'))
-      })
+      write(typesFile, buildTypeFile(data[2] || capital(name), buildArgs(types)))
+      .then(() => output('Saved new type to: ' + output.style(typesFile, 'green')))
     })
   })
-  .catch(err => output(output.error(err.message)))
+  .catch(err => {
+    console.log(err)
+    output(output.error(err.message))
+  })
 }
